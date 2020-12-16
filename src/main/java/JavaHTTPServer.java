@@ -1,18 +1,19 @@
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.InetAddress;
 import java.util.Date;
 import java.util.StringTokenizer;
 
 // Each Client Connection will be managed in a dedicated Thread
 public class JavaHTTPServer implements Runnable{
 
-    static final File WEB_ROOT = new File("./src/main/java/files/");
+    static final File WEB_ROOT = new File("/home/cabox/workspace/JavaHTTPServer/src/main/files/");
     static final String DEFAULT_FILE = "index.html";
     static final String FILE_NOT_FOUND = "404.html";
     static final String METHOD_NOT_SUPPORTED = "not_supported.html";
     // port to listen connection
-    static final int PORT = 8080;
+    static final int PORT = 3000;
 
     // verbose mode
     static final boolean verbose = true;
@@ -100,15 +101,18 @@ public class JavaHTTPServer implements Runnable{
                 // GET or HEAD method
                 if (fileRequested.endsWith("/")) {
                     fileRequested += DEFAULT_FILE;
+                    
+                    fileFound(out, dataOut, fileRequested);
                 }
-
+                
                 File file = new File(WEB_ROOT, fileRequested);
 
                 if (fileRequested.endsWith("puntiVendita.xml")) {
                     System.out.println("Client need XML");
                     new JSONHandler();
                     new XMLHandler();
-                    file = new File(WEB_ROOT + "puntiVendita.xml");
+                    
+                    fileFound(out, dataOut,fileRequested);
                 }
                 else if (fileRequested.endsWith("db/json") || fileRequested.endsWith("db/xml")) {
                     SQLHandler sqlHandler = new SQLHandler();
@@ -119,38 +123,18 @@ public class JavaHTTPServer implements Runnable{
                     if (fileRequested.endsWith("json")) {
                         System.out.println("Client need db.json");
                         JSON_XML.serialiseJSON(persone);
-                        fileRequested = WEB_ROOT + "/db/db.json";
+                        //fileRequested = WEB_ROOT + "/db/db.json";
+                        fileRequested = "/db/db.json";
                         file = new File(fileRequested);
                     }
                     else {
                         System.out.println("Client need db.xml");
-                        JSON_XML.serialiseJSON(persone);
-                        fileRequested = WEB_ROOT + "/db/db.xml";
+                        JSON_XML.serialiseXML(persone);
+                        //fileRequested = WEB_ROOT + "/db/db.xml";
+                        fileRequested = "/db/db.xml";
                         file = new File(fileRequested);
                     }
-                }
-
-                int fileLength = (int) file.length();
-                String content = getContentType(fileRequested);
-
-                if (method.equals("GET")) { // GET method so we return content
-                    byte[] fileData = readFileData(file, fileLength);
-
-                    // send HTTP Headers
-                    out.println("HTTP/1.1 200 OK");
-                    out.println("Server: Java HTTP Server from SSaurel : 1.0");
-                    out.println("Date: " + new Date());
-                    out.println("Content-type: " + content);
-                    out.println("Content-length: " + fileLength);
-                    out.println(); // blank line between headers and content, very important !
-                    out.flush(); // flush character output stream buffer
-
-                    dataOut.write(fileData, 0, fileLength);
-                    dataOut.flush();
-                }
-
-                if (verbose) {
-                    System.out.println("File " + fileRequested + " of type " + content + " returned");
+                    fileFound(out, dataOut,fileRequested);
                 }
 
             }
@@ -213,7 +197,7 @@ public class JavaHTTPServer implements Runnable{
     }
 
     private void fileNotFound(PrintWriter out, OutputStream dataOut, String fileRequested) throws IOException {
-        File file = new File(WEB_ROOT, FILE_NOT_FOUND);
+        File file = new File(WEB_ROOT, fileRequested);
         int fileLength = (int) file.length();
         String content = "text/html";
         byte[] fileData = readFileData(file, fileLength);
@@ -234,6 +218,35 @@ public class JavaHTTPServer implements Runnable{
         }
     }
 
+    private void fileFound(PrintWriter out, OutputStream dataOut, String fileRequested) throws IOException {
+        File file = new File(WEB_ROOT, fileRequested);
+        int fileLength = (int) file.length();
+        String content;
+        if(fileRequested.endsWith("xml"))
+            content = "text/xml";
+        else if(fileRequested.endsWith("json"))
+            content = "text/json";
+        else
+            content = getContentType(fileRequested);
+        byte[] fileData = readFileData(file, fileLength);
+
+        // send HTTP Headers
+        out.println("HTTP/1.1 200 OK");
+        out.println("Server: Java HTTP Server from SSaurel : 1.0");
+        out.println("Date: " + new Date());
+        out.println("Content-type: " + content);
+        out.println("Content-length: " + fileLength);
+        out.println(); // blank line between headers and content, very important !
+        out.flush(); // flush character output stream buffer
+
+        dataOut.write(fileData, 0, fileLength);
+        dataOut.flush();
+
+        if (verbose) {
+            System.out.println("File " + fileRequested + " of type " + content + " returned");
+        }
+    }
+    
     private void redirect(String method, PrintWriter out, BufferedOutputStream dataOut) {
         File file = new File(WEB_ROOT, "./hh/hh.html");
         int fileLength = (int) file.length();

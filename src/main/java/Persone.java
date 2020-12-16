@@ -2,11 +2,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Persone {
+    private int size;
     private List<Persona> personeArray;
 
     //Costruttore
     public Persone() {
         personeArray = new ArrayList<>();
+        size = getSize();
     }
 
     //Getter
@@ -24,5 +26,4 @@ public class Persone {
     public boolean remove(Persona persona) {
         return personeArray.remove(persona);
     }
-
 }
